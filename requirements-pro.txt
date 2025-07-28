@@ -1,0 +1,4 @@
+# everything from minimal plus:
+pyannote.audio==3.*
+pycaw==20240210
+# optional: whisperx later if we add alignment

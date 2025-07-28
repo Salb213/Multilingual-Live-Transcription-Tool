@@ -57,7 +57,7 @@ class MicWorker(QThread):
         self.translate_flag = translate_flag
         self._running = False
         self._paused = False
-        self.asr = ASREngine(ASRConfig())
+        self.asr = None            # <- lazy
         self.saver = AutoSaver(Path(save_root), interval_minutes=15)
 
     def start_run(self):
@@ -78,18 +78,26 @@ class MicWorker(QThread):
         self._running = False
 
     def run(self):
-        self.status_text.emit("Listening…")
         try:
+            if self.asr is None:
+                self.status_text.emit("Loading ASR model (first run can take a minute)…")
+                from app.asr.transcribe import ASREngine, ASRConfig
+                self.asr = ASREngine(ASRConfig())
+                self.status_text.emit("Listening…")
+
             while self._running:
                 if self._paused:
                     self.msleep(50)
                     continue
+
                 audio16 = record_block(self.mic_index, seconds=2.0).squeeze(-1)
                 text, lang, _ = self.asr.transcribe(audio16, TARGET_SR)
                 if not text:
                     continue
+
                 lang_up = (lang or "").upper()
                 line = f"[{time.strftime('%H:%M:%S')}] Speaker 1 (You) ({lang_up}): {text}"
+
                 tr = ""
                 if self.translate_flag() and lang in ("pl", "sk"):
                     try:
@@ -98,12 +106,13 @@ class MicWorker(QThread):
                         tr = ""
                 if tr:
                     line += f"\n               → DE: {tr}"
+
                 self.line_ready.emit(line)
                 self.saver.write(line)
+
         finally:
             self.saver.close()
             self.status_text.emit("Stopped.")
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()

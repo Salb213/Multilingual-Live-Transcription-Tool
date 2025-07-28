@@ -4,7 +4,7 @@ from faster_whisper import WhisperModel
 
 @dataclass
 class ASRConfig:
-    model_name: str = "small"
+    model_name: str = "base"
     device: str = "cpu"
     compute_type: str = "int8"
     vad_filter: bool = True

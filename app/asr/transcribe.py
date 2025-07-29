@@ -21,10 +21,7 @@ class ASREngine:
             self.cfg.model_name,
             device=self.cfg.device,
             compute_type=self.cfg.compute_type,
-            intra_threads=self.cfg.intra_threads,
-            inter_threads=self.cfg.inter_threads,
         )
-
     def transcribe(
         self,
         audio: np.ndarray,

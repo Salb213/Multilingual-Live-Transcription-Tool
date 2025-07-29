@@ -234,7 +234,7 @@ class MainWindow(QMainWindow):
     def _stop(self):
         if self.worker and self.worker.isRunning():
             self.worker.stop_run()
-            self.worker.wait(2000)
+            self.worker.wait(10000)
         self.timer.stop()
         self.status_label.setText("Idle.")
         self.btn_start.setEnabled(True)

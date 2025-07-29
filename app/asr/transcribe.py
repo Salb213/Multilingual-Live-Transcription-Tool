@@ -6,11 +6,11 @@ from faster_whisper import WhisperModel
 
 @dataclass
 class ASRConfig:
-    model_name: str = "medium"
+    model_name: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
     beam_size: int = 3
-    vad_filter: bool = True
+    vad_filter: bool = False
     intra_threads: int = 2
     inter_threads: int = 1
 
@@ -36,8 +36,6 @@ class ASREngine:
             audio,
             language=forced_lang,
             beam_size=self.cfg.beam_size,
-            vad_filter=self.cfg.vad_filter,
-            vad_parameters=dict(min_silence_duration_ms=200),
         )
         segments = list(segments) if segments else []
         text = "".join(s.text for s in segments).strip()

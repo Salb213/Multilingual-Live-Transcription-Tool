@@ -17,6 +17,8 @@ class ASREngine:
             cfg.model_name,
             device=cfg.device,
             compute_type=cfg.compute_type,
+	    cpu_threads=2
+	    num_workers=1,
         )
 
     def transcribe(self, audio: np.ndarray, sr: int):

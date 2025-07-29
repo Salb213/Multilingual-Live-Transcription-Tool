@@ -1,8 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Any
 import numpy as np
-from faster_whisper import WhisperModel, Segment
+from faster_whisper import WhisperModel
 
 @dataclass
 class ASRConfig:
@@ -32,7 +32,7 @@ class ASREngine:
         *,
         forced_lang: str | None = None,
         return_segments: bool = False,
-    ) -> Tuple[str, str, float] | Tuple[str, str, float, List[Segment]]:
+    ) -> Tuple[str, str, float] | Tuple[str, str, float, List[Any]]:
         if sr != 16000:
             raise ValueError("Whisper expects 16 kHz mono audio (got %s Hz)" % sr)
         segments, info = self.model.transcribe(

@@ -1,34 +1,59 @@
+from __future__ import annotations
 from dataclasses import dataclass
+from typing import List, Tuple, Optional
 import numpy as np
-from faster_whisper import WhisperModel
+from faster_whisper import WhisperModel, Segment
 
 @dataclass
 class ASRConfig:
-    model_name: str = "base"
+    model_name: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
-    vad_filter: bool = True
     beam_size: int = 1
+    vad_filter: bool = True
+    cpu_threads: int = 2
+    num_workers: int = 1
 
 class ASREngine:
-    def __init__(self, cfg: ASRConfig):
-        self.cfg = cfg
+    def __init__(self, cfg: ASRConfig | None = None):
+        self.cfg = cfg or ASRConfig()
         self.model = WhisperModel(
-            cfg.model_name,
-            device=cfg.device,
-            compute_type=cfg.compute_type,
-	    cpu_threads=2
-	    num_workers=1,
+            self.cfg.model_name,
+            device=self.cfg.device,
+            compute_type=self.cfg.compute_type,
+            cpu_threads=self.cfg.cpu_threads,
+            num_workers=self.cfg.num_workers,
         )
 
-    def transcribe(self, audio: np.ndarray, sr: int):
-        segs, info = self.model.transcribe(
+    def transcribe(
+        self,
+        audio: np.ndarray,
+        sr: int,
+        *,
+        forced_lang: str | None = None,
+        return_segments: bool = False,
+    ) -> Tuple[str, str, float] | Tuple[str, str, float, List[Segment]]:
+        if sr != 16000:
+            raise ValueError("Whisper expects 16 kHz mono audio (got %s Hz)" % sr)
+        segments, info = self.model.transcribe(
             audio,
+            language=forced_lang,
             beam_size=self.cfg.beam_size,
             vad_filter=self.cfg.vad_filter,
             vad_parameters=dict(min_silence_duration_ms=200),
         )
-        text = "".join(s.text for s in segs).strip()
-        lang = (info.language or "").lower()
-        prob = float(info.language_probability or 0.0)
+        segments = list(segments) if segments else []
+        text = "".join(s.text for s in segments).strip()
+        lang = (forced_lang or info.language or "").lower()
+        prob = 0.0 if forced_lang else float(info.language_probability or 0.0)
+        if return_segments:
+            return text, lang, prob, segments
         return text, lang, prob
+
+    def detect_language(self, audio: np.ndarray, sr: int) -> Tuple[str, float]:
+        _, info = self.model.transcribe(
+            audio,
+            task="lang_id",
+            vad_filter=False,
+        )
+        return (info.language or "").lower(), float(info.language_probability or 0.0)

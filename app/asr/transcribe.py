@@ -1,18 +1,18 @@
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import List, Tuple, Any
+from typing import Optional
 import numpy as np
 from faster_whisper import WhisperModel
 
 @dataclass
 class ASRConfig:
-    model_name: str = "small"
+    model_name: str = "medium"
     device: str = "cpu"
     compute_type: str = "int8"
-    beam_size: int = 1
+    beam_size: int = 3
     vad_filter: bool = True
-    cpu_threads: int = 2
-    num_workers: int = 1
+    intra_threads: int = 2
+    inter_threads: int = 1
 
 class ASREngine:
     def __init__(self, cfg: ASRConfig | None = None):
@@ -21,8 +21,8 @@ class ASREngine:
             self.cfg.model_name,
             device=self.cfg.device,
             compute_type=self.cfg.compute_type,
-            cpu_threads=self.cfg.cpu_threads,
-            num_workers=self.cfg.num_workers,
+            intra_threads=self.cfg.intra_threads,
+            inter_threads=self.cfg.inter_threads,
         )
 
     def transcribe(
@@ -30,7 +30,7 @@ class ASREngine:
         audio: np.ndarray,
         sr: int,
         *,
-        forced_lang: str | None = None,
+        forced_lang: str | None = "de",
         return_segments: bool = False,
     ) -> Tuple[str, str, float] | Tuple[str, str, float, List[Any]]:
         if sr != 16000:
@@ -51,9 +51,7 @@ class ASREngine:
         return text, lang, prob
 
     def detect_language(self, audio: np.ndarray, sr: int) -> Tuple[str, float]:
-        _, info = self.model.transcribe(
-            audio,
-            task="lang_id",
-            vad_filter=False,
-        )
+        if sr != 16000:
+            raise ValueError("Whisper expects 16 kHz mono audio")
+        _, info = self.model.transcribe(audio, task="lang_id", vad_filter=False)
         return (info.language or "").lower(), float(info.language_probability or 0.0)
